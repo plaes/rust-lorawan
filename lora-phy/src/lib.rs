@@ -226,35 +226,27 @@ where
     }
 
     /// Prepare the Semtech chip for a receive operation (single shot, continuous, or duty cycled) and initiate the operation
-    #[allow(clippy::too_many_arguments)]
+    // TODO: Could merge operation into enum?
+    // RxOperation { RxSingle(num_symbols), RxC, DutyCycle(DutyCycleParams) }
     pub async fn prepare_for_rx(
         &mut self,
         mdltn_params: &ModulationParams,
         rx_pkt_params: &PacketParams,
-        window_in_secs: Option<u8>, // None for Rx continuous
+        symbol_timeout: Option<u16>, // None for Rx continuous
         duty_cycle_params: Option<&DutyCycleParams>,
         rx_boosted_if_supported: bool,
     ) -> Result<(), RadioError> {
-        let mut symbol_timeout: u32 = 0;
-        match window_in_secs {
-            Some(window) => {
-                let sf = u32::from(mdltn_params.spreading_factor);
-                let bw = u32::from(mdltn_params.bandwidth);
-                let symbols_per_sec = bw / (0x01u32 << sf); // symbol rate in symbols/sec = (BW in Hz) / (2 raised to the SF power)
-                let window_in_ms: u32 = (window as u32).checked_mul(1000).unwrap();
-                symbol_timeout = (window_in_ms - 200).checked_mul(symbols_per_sec).unwrap() / 1000; // leave a gap (subtract 200ms) to allow time to set up another window
-                if symbol_timeout > MAX_LORA_SYMB_NUM_TIMEOUT {
-                    symbol_timeout = MAX_LORA_SYMB_NUM_TIMEOUT;
-                }
-                self.rx_continuous = false;
-                // provide a safety net polling timeout while allowing reception of a packet which starts within the window but exceeds the window size
-                self.polling_timeout_in_ms = Some(window_in_ms.checked_mul(5).unwrap());
-            }
-            None => {
-                self.rx_continuous = true;
-                self.polling_timeout_in_ms = None;
-            }
+        // TODO: Clean this up..
+        let mut num_symbols = 0;
+        if let Some(n) = symbol_timeout {
+            self.rx_continuous = false;
+            num_symbols = n;
+        } else {
+            self.rx_continuous = true;
         }
+
+        // Disable polling
+        self.polling_timeout_in_ms = None;
 
         self.prepare_modem(mdltn_params).await?;
 
@@ -266,13 +258,14 @@ where
             None => RadioMode::Receive,
         };
         self.radio_kind.set_irq_params(Some(self.radio_mode)).await?;
+        defmt::trace!("symbol_timeout: {}", num_symbols);
         self.radio_kind
             .do_rx(
                 rx_pkt_params,
                 duty_cycle_params,
                 self.rx_continuous,
                 rx_boosted_if_supported,
-                symbol_timeout as u16,
+                num_symbols,
             )
             .await
     }
@@ -299,6 +292,7 @@ where
         receiving_buffer: &mut [u8],
         target_rx_state: TargetIrqState,
     ) -> Result<IrqState, RadioError> {
+        defmt::trace!("RX: continuous: {}", self.rx_continuous);
         match self
             .radio_kind
             .process_irq(
