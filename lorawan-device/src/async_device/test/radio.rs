@@ -1,5 +1,5 @@
 use super::*;
-use crate::async_device::radio::PhyRxTx;
+use crate::async_device::radio::{PhyRxTx, RxStatus};
 use std::sync::Arc;
 use tokio::{
     sync::{mpsc, Mutex},
@@ -43,7 +43,11 @@ impl PhyRxTx for TestRadio {
         Ok(length as u32)
     }
 
-    async fn setup_rx(&mut self, config: RfConfig) -> Result<(), Self::PhyError> {
+    async fn setup_rx(
+        &mut self,
+        config: RfConfig,
+        _continuous: bool,
+    ) -> Result<(), Self::PhyError> {
         self.current_config = Some(config);
         Ok(())
     }
@@ -63,6 +67,9 @@ impl PhyRxTx for TestRadio {
                 }
             }
         }
+    }
+    async fn rx_single(&mut self, _rx_buf: &mut [u8]) -> Result<RxStatus, Self::PhyError> {
+        Ok(RxStatus::RxTimeout)
     }
 }
 
