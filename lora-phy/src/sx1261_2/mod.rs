@@ -119,6 +119,7 @@ where
 
     // Set the number of symbols the radio will wait to detect a reception
     async fn set_lora_symbol_num_timeout(&mut self, symbol_num: u16) -> Result<(), RadioError> {
+        /*
         let mut exp = 0u8;
         let mut reg;
         let mut mant = ((core::cmp::min(symbol_num, SX126X_MAX_LORA_SYMB_NUM_TIMEOUT as u16) as u8) + 1) >> 1;
@@ -127,10 +128,16 @@ where
             exp += 1;
         }
         reg = mant << ((2 * exp) + 1);
+        */
 
-        let op_code_and_timeout = [OpCode::SetLoRaSymbTimeout.value(), reg];
+        let reg = symbol_num as u8;
+
+        defmt::info!("Num timeout: {}", reg);
+
+        let op_code_and_timeout = [OpCode::SetLoRaSymbTimeout.value(), reg as u8];
         self.intf.write(&op_code_and_timeout, false).await?;
 
+        /* Why?
         if symbol_num != 0 {
             reg = exp + (mant << 3);
             let register_and_timeout = [
@@ -141,6 +148,7 @@ where
             ];
             self.intf.write(&register_and_timeout, false).await?;
         }
+        */
 
         Ok(())
     }

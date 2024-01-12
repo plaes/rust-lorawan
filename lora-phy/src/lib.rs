@@ -29,6 +29,19 @@ use mod_traits::*;
 // Maximum value for symbol timeout across known LoRa chips
 const MAX_LORA_SYMB_NUM_TIMEOUT: u32 = 248;
 
+/// Listening modes for Radio
+pub enum RxMode {
+    /// Rx single mode with timeout
+    // TODO:
+    // sx126x has also a duration argument for SetRx:
+    // duration * 15.625uS (up to 262s (0 < timeout < 0xFFFFFF)
+    RxSingle(u16),
+    /// Rx Continuous mode
+    RxContinuous,
+    /// Rx DutyCycle mode
+    DutyCycle(DutyCycleParams),
+}
+
 /// Provides the physical layer API to support LoRa chips
 pub struct LoRa<RK, DLY>
 where
@@ -227,7 +240,6 @@ where
 
     /// Prepare the Semtech chip for a receive operation (single shot, continuous, or duty cycled) and initiate the operation
     // TODO: Could merge operation into enum?
-    // RxOperation { RxSingle(num_symbols), RxC, DutyCycle(DutyCycleParams) }
     pub async fn prepare_for_rx(
         &mut self,
         mdltn_params: &ModulationParams,
