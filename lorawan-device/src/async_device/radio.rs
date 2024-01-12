@@ -9,6 +9,11 @@ impl<R> From<Error<R>> for super::Error<R> {
     }
 }
 
+pub enum RxStatus {
+    Rx(usize, RxQuality),
+    RxTimeout,
+}
+
 /// An asynchronous timer that allows the state machine to await
 /// between RX windows.
 pub trait Timer {
@@ -41,12 +46,18 @@ pub trait PhyRxTx: Sized {
     async fn tx(&mut self, config: TxConfig, buf: &[u8]) -> Result<u32, Self::PhyError>;
 
     /// Configures the radio to receive data. This future should not actually await the data itself.
-    async fn setup_rx(&mut self, config: RfConfig) -> Result<(), Self::PhyError>;
+    async fn setup_rx(
+        &mut self,
+        config: RfConfig,
+        rx_continuous: bool,
+    ) -> Result<(), Self::PhyError>;
 
     /// Receive data into the provided buffer with the given transceiver configuration. The returned
     /// future should only complete when RX data have been received. Furthermore, it should be
     /// possible to await the future again without settings up the receive config again.
     async fn rx(&mut self, rx_buf: &mut [u8]) -> Result<(usize, RxQuality), Self::PhyError>;
+
+    async fn rx_single(&mut self, buf: &mut [u8]) -> Result<RxStatus, Self::PhyError>;
 
     /// Puts the radio into a low-power mode
     async fn low_power(&mut self) -> Result<(), Self::PhyError> {
