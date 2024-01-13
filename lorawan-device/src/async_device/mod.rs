@@ -364,8 +364,11 @@ where
         let _ = self.between_windows(rx1_start_delay).await?;
 
         // RX1
-        let rx_config =
+        let mut rx_config =
             self.mac.region.get_rx_config(self.mac.configuration.data_rate, frame, &Window::_1);
+        if self.radio.get_rx_window_offset_ms() < 0 {
+            rx_config.window_buffer_ms = (-self.radio.get_rx_window_offset_ms()) as u32;
+        }
         self.radio.setup_rx(rx_config, false).await.map_err(Error::Radio)?;
 
         if let Some(response) = self.rx_listen().await? {
@@ -376,10 +379,12 @@ where
         let _ = self.between_windows(rx2_start_delay).await?;
 
         // RX2
-        let rx_config =
+        let mut rx_config =
             self.mac.region.get_rx_config(self.mac.configuration.data_rate, frame, &Window::_2);
         self.radio.setup_rx(rx_config, false).await.map_err(Error::Radio)?;
-
+        if self.radio.get_rx_window_offset_ms() < 0 {
+            rx_config.window_buffer_ms = (-self.radio.get_rx_window_offset_ms()) as u32;
+        }
         if let Some(response) = self.rx_listen().await? {
             return Ok(response);
         }

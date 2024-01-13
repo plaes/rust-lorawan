@@ -130,9 +130,11 @@ where
         reg = mant << ((2 * exp) + 1);
         */
 
-        let reg = symbol_num as u8;
-
-        defmt::info!("Num timeout: {}", reg);
+        let reg = if SX126X_MAX_LORA_SYMB_NUM_TIMEOUT > 255 {
+            SX126X_MAX_LORA_SYMB_NUM_TIMEOUT
+        } else {
+            symbol_num as u8
+        };
 
         let op_code_and_timeout = [OpCode::SetLoRaSymbTimeout.value(), reg as u8];
         self.intf.write(&op_code_and_timeout, false).await?;
@@ -602,7 +604,6 @@ where
     ) -> Result<(), RadioError> {
         let mut symbol_timeout_final = symbol_timeout;
         let mut timeout_in_ms_final = 0x00000000u32; // No chip timeout for Rx single mode
-
         if let Some(&_duty_cycle) = duty_cycle_params {
             if rx_continuous {
                 return Err(RadioError::DutyCycleRxContinuousUnsupported);

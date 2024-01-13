@@ -76,9 +76,9 @@ where
     }
 
     // Set the number of symbols the radio will wait to detect a reception (maximum 1023 symbols)
-    async fn set_lora_symbol_num_timeout(&mut self, symbol_num: u16) -> Result<(), RadioError> {
+    async fn set_lora_symbol_num_timeout(&mut self, mut symbol_num: u16) -> Result<(), RadioError> {
         if symbol_num > 0x03ffu16 {
-            return Err(RadioError::InvalidSymbolTimeout);
+            symbol_num = 0x03ffu16;
         }
         let symbol_num_msb = ((symbol_num & 0x0300u16) >> 8) as u8;
         let symbol_num_lsb = (symbol_num & 0x00ffu16) as u8;

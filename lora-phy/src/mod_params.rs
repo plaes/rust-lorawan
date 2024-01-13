@@ -1,6 +1,7 @@
 use core::fmt::Debug;
 
 pub use lora_modulation::{Bandwidth, CodingRate, SpreadingFactor};
+use lora_modulation::BaseBandModulationParams;
 
 /// Errors types reported during LoRa physical layer processing
 #[allow(clippy::upper_case_acronyms)]
@@ -70,6 +71,12 @@ pub struct ModulationParams {
     pub(crate) coding_rate: CodingRate,
     pub(crate) low_data_rate_optimize: u8,
     pub(crate) frequency_in_hz: u32,
+}
+
+impl From<ModulationParams> for BaseBandModulationParams {
+    fn from(params: ModulationParams) -> Self {
+        Self::new(params.spreading_factor, params.bandwidth, params.coding_rate)
+    }
 }
 
 /// Packet parameters for a send or receive communication channel

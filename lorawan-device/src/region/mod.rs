@@ -256,6 +256,7 @@ impl Configuration {
                     dr.bandwidth,
                     self.get_coding_rate(),
                 ),
+                window_buffer_ms: 0,
             },
         }
     }
@@ -278,6 +279,7 @@ impl Configuration {
                 dr.bandwidth,
                 self.get_coding_rate(),
             ),
+            window_buffer_ms: 0,
         }
     }
 
@@ -321,6 +323,7 @@ impl Configuration {
                 dr.bandwidth,
                 self.get_coding_rate(),
             ),
+            window_buffer_ms: 0,
         }
     }
 

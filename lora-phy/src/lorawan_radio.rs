@@ -1,5 +1,6 @@
 #![allow(missing_docs)]
 
+use lora_modulation::BaseBandModulationParams;
 use lorawan_device::async_device::radio::{PhyRxTx, RfConfig, RxQuality, RxStatus, TxConfig};
 use lorawan_device::Timings;
 
@@ -79,6 +80,8 @@ impl From<RadioError> for Error {
     }
 }
 
+const PREAMBLE_SYMBOLS: u16 = 13; //12.25
+
 /// Provide the LoRa physical layer rx/tx interface for boards supported by the external lora-phy
 /// crate
 impl<RK, DLY, const P: u8, const G: i8> PhyRxTx for LorawanRadio<RK, DLY, P, G>
@@ -91,6 +94,7 @@ where
     const ANTENNA_GAIN: i8 = G;
 
     const MAX_RADIO_POWER: u8 = P;
+
 
     async fn tx(&mut self, config: TxConfig, buffer: &[u8]) -> Result<u32, Self::PhyError> {
         let mdltn_params = self.lora.create_modulation_params(
@@ -125,7 +129,13 @@ where
         // sx1272 - works with 12
         let num_symbols = match rx_continuous {
             true => None,
-            false => Some(12),
+            false => {
+                let delay_in_symbols =  BaseBandModulationParams::new( mdltn_params.spreading_factor, mdltn_params.bandwidth, mdltn_params.coding_rate).delay_in_symbols(
+                    config.window_buffer_ms);
+                Some(
+                   delay_in_symbols + PREAMBLE_SYMBOLS
+                    )
+            }
         };
 
         self.lora

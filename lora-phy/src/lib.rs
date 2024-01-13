@@ -270,7 +270,7 @@ where
             None => RadioMode::Receive,
         };
         self.radio_kind.set_irq_params(Some(self.radio_mode)).await?;
-        defmt::trace!("symbol_timeout: {}", num_symbols);
+        defmt::info!("symbol_timeout: {}", num_symbols);
         self.radio_kind
             .do_rx(
                 rx_pkt_params,
