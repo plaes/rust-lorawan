@@ -73,12 +73,6 @@ pub struct ModulationParams {
     pub(crate) frequency_in_hz: u32,
 }
 
-impl From<ModulationParams> for BaseBandModulationParams {
-    fn from(params: ModulationParams) -> Self {
-        Self::new(params.spreading_factor, params.bandwidth, params.coding_rate)
-    }
-}
-
 /// Packet parameters for a send or receive communication channel
 pub struct PacketParams {
     pub(crate) preamble_length: u16,  // number of LoRa symbols in the preamble
