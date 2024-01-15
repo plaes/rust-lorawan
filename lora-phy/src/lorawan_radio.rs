@@ -1,6 +1,6 @@
 #![allow(missing_docs)]
 
-use lorawan_device::async_device::radio::{PhyRxTx, RxConfig, RxQuality, RxStatus, TxConfig};
+use lorawan_device::async_device::radio::{PhyRxTx, RxConfig, RxMode as LorawanRxMode, RxQuality, RxStatus, TxConfig};
 use lorawan_device::Timings;
 
 use super::mod_params::{PacketParams, RadioError};
@@ -123,7 +123,7 @@ where
             .lora
             .create_rx_packet_params(8, false, 255, true, true, &mdltn_params)?;
         self.lora
-            .prepare_for_rx(RxMode::Continuous, &mdltn_params, &rx_pkt_params, false)
+            .prepare_for_rx(config.mode.into(), &mdltn_params, &rx_pkt_params, false)
             .await?;
         self.rx_pkt_params = Some(rx_pkt_params);
         Ok(())
@@ -153,6 +153,15 @@ where
             }
         } else {
             Err(Error::NoRxParams)
+        }
+    }
+}
+
+impl From<LorawanRxMode> for RxMode {
+    fn from(mode: LorawanRxMode) -> Self {
+        match mode {
+            LorawanRxMode::Continuous => RxMode::Continuous,
+            LorawanRxMode::Single(symbols) => RxMode::Single(symbols),
         }
     }
 }
