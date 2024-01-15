@@ -3,7 +3,7 @@ use embassy_stm32::interrupt::InterruptExt;
 use embassy_stm32::pac;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
-use embassy_time::Timer;
+use embassy_time::{Instant, Timer};
 use embedded_hal::digital::OutputPin;
 use embedded_hal_async::spi::{ErrorType, Operation, SpiBus, SpiDevice};
 use lora_phy::mod_params::RadioError;
@@ -14,14 +14,17 @@ use lora_phy::DelayNs;
 /// Interrupt handler.
 pub struct InterruptHandler {}
 
+
+
 impl interrupt::typelevel::Handler<interrupt::typelevel::SUBGHZ_RADIO> for InterruptHandler {
     unsafe fn on_interrupt() {
+        let instant = Instant::now();
         interrupt::SUBGHZ_RADIO.disable();
-        IRQ_SIGNAL.signal(());
+        IRQ_SIGNAL.signal(instant);
     }
 }
 
-static IRQ_SIGNAL: Signal<CriticalSectionRawMutex, ()> = Signal::new();
+static IRQ_SIGNAL: Signal<CriticalSectionRawMutex, Instant> = Signal::new();
 
 /// Base for the InterfaceVariant implementation for an stm32wl/sx1262 combination
 pub struct Stm32wlInterfaceVariant<CTRL> {
@@ -63,7 +66,8 @@ where
 
     async fn await_irq(&mut self) -> Result<(), RadioError> {
         unsafe { interrupt::SUBGHZ_RADIO.enable() };
-        IRQ_SIGNAL.wait().await;
+        let time = IRQ_SIGNAL.wait().await;
+        defmt::info!("IRQ at {:?}", time.as_millis());
         Ok(())
     }
 
