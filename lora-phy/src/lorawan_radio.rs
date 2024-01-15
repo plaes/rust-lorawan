@@ -112,15 +112,24 @@ where
         Ok(0)
     }
 
-    async fn setup_rx(&mut self, config: RfConfig) -> Result<(), Self::PhyError> {
+    async fn setup_rx(&mut self, config: RfConfig, rx_continuous: bool) -> Result<(), Self::PhyError> {
         let mdltn_params =
             self.lora
                 .create_modulation_params(config.bb.sf, config.bb.bw, config.bb.cr, config.frequency)?;
         let rx_pkt_params = self
             .lora
             .create_rx_packet_params(8, false, 255, true, true, &mdltn_params)?;
+        // TODO: Allow DutyCycle as well?
+        let listen_mode = if rx_continuous {
+            RxMode::Continuous
+        } else {
+            // TODO: Allow tweaking radio-specific timeout:
+            // sx1262 - works with 8
+            // sx1272 - works with 12 (although should work with 4 as well)
+            RxMode::Single(12)
+        };
         self.lora
-            .prepare_for_rx(RxMode::Continuous, &mdltn_params, &rx_pkt_params, false)
+            .prepare_for_rx(listen_mode, &mdltn_params, &rx_pkt_params, false)
             .await?;
         self.rx_pkt_params = Some(rx_pkt_params);
         Ok(())

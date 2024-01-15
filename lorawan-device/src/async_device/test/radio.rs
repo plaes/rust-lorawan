@@ -43,7 +43,11 @@ impl PhyRxTx for TestRadio {
         Ok(length as u32)
     }
 
-    async fn setup_rx(&mut self, config: RfConfig) -> Result<(), Self::PhyError> {
+    async fn setup_rx(
+        &mut self,
+        config: RfConfig,
+        _continuous: bool,
+    ) -> Result<(), Self::PhyError> {
         self.current_config = Some(config);
         Ok(())
     }

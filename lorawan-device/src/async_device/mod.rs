@@ -27,7 +27,7 @@ pub use embassy_time::EmbassyTimer;
 #[cfg(test)]
 mod test;
 
-use self::radio::{RxQuality};
+use self::radio::RxQuality;
 use core::cmp::min;
 
 /// Type representing a LoRaWAN capable device.
@@ -294,7 +294,7 @@ where
     async fn window_complete(&mut self) -> Result<(), Error<R::PhyError>> {
         if self.class_c {
             let rf_config = self.mac.region.get_rxc_config(self.mac.configuration.data_rate);
-            self.radio.setup_rx(rf_config).await.map_err(Error::Radio)
+            self.radio.setup_rx(rf_config, true).await.map_err(Error::Radio)
         } else {
             self.radio.low_power().await.map_err(Error::Radio)
         }
@@ -311,7 +311,7 @@ where
         }
         // Class C listen while waiting for the window
         let rf_config = self.mac.region.get_rxc_config(self.mac.configuration.data_rate);
-        self.radio.setup_rx(rf_config).await.map_err(Error::Radio)?;
+        self.radio.setup_rx(rf_config, true).await.map_err(Error::Radio)?;
         let mut response = None;
         let timeout_fut = self.timer.at(duration.into());
         pin_mut!(timeout_fut);
@@ -375,7 +375,7 @@ where
             let mut window_duration = min(rx1_end_delay, rx2_start_delay);
 
             // Pass the full radio buffer slice to RX
-            self.radio.setup_rx(rx_config).await.map_err(Error::Radio)?;
+            self.radio.setup_rx(rx_config, true).await.map_err(Error::Radio)?;
             let timeout_fut = self.timer.at(window_duration.into());
             pin_mut!(timeout_fut);
 
@@ -438,7 +438,7 @@ where
             let window_duration = self.radio.get_rx_window_duration_ms();
 
             // Pass the full radio buffer slice to RX
-            self.radio.setup_rx(rx_config).await.map_err(Error::Radio)?;
+            self.radio.setup_rx(rx_config, true).await.map_err(Error::Radio)?;
             let timeout_fut = self.timer.delay_ms(window_duration.into());
             pin_mut!(timeout_fut);
 
