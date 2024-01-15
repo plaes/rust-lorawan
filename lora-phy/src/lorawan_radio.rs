@@ -1,6 +1,6 @@
 #![allow(missing_docs)]
 
-use lorawan_device::async_device::radio::{PhyRxTx, RfConfig, RxQuality, TxConfig};
+use lorawan_device::async_device::radio::{PhyRxTx, RfConfig, RxQuality, RxStatus, TxConfig};
 use lorawan_device::Timings;
 
 use super::mod_params::{PacketParams, RadioError};
@@ -126,6 +126,17 @@ where
         Ok(())
     }
 
+    async fn rx_single(&mut self, buf: &mut [u8]) -> Result<RxStatus, Self::PhyError> {
+        if let Some(rx_params) = &self.rx_pkt_params {
+            match self.lora.rx(rx_params, buf).await {
+                Ok((len, q)) => Ok(RxStatus::Rx(len as usize, RxQuality::new(q.rssi, q.snr as i8))),
+                Err(RadioError::ReceiveTimeout) => Ok(RxStatus::RxTimeout),
+                Err(err) => Err(err.into()),
+            }
+        } else {
+            Err(Error::NoRxParams)
+        }
+    }
     async fn rx(&mut self, receiving_buffer: &mut [u8]) -> Result<(usize, RxQuality), Self::PhyError> {
         if let Some(rx_params) = &self.rx_pkt_params {
             match self.lora.rx(rx_params, receiving_buffer).await {
