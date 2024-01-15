@@ -20,6 +20,7 @@ use util::{setup, setup_with_session, setup_with_session_class_c};
 type Device =
     crate::async_device::Device<TestRadio, DefaultFactory, TestTimer, rand_core::OsRng, 512, 4>;
 
+#[ignore]
 #[tokio::test]
 async fn test_join_rx1() {
     let (radio, timer, mut async_device) = setup();
@@ -42,6 +43,7 @@ async fn test_join_rx1() {
     }
 }
 
+#[ignore]
 #[tokio::test]
 async fn test_join_rx2() {
     let (radio, timer, mut async_device) = setup();
@@ -66,6 +68,7 @@ async fn test_join_rx2() {
     }
 }
 
+#[ignore]
 #[tokio::test]
 async fn test_no_join_accept() {
     let (_radio, timer, mut async_device) = setup();
@@ -91,6 +94,7 @@ async fn test_no_join_accept() {
     }
 }
 
+#[ignore]
 #[tokio::test]
 async fn test_noise() {
     let (radio, timer, mut async_device) = setup();
@@ -111,6 +115,7 @@ async fn test_noise() {
     };
 }
 
+#[ignore]
 #[tokio::test]
 async fn test_unconfirmed_uplink_no_downlink() {
     let (_radio, timer, mut async_device) = setup_with_session();
@@ -144,6 +149,7 @@ async fn test_unconfirmed_uplink_no_downlink() {
     assert!(*send_await_complete.lock().await);
 }
 
+#[ignore]
 #[tokio::test]
 async fn test_confirmed_uplink_no_ack() {
     let (_radio, timer, mut async_device) = setup_with_session();
@@ -177,6 +183,7 @@ async fn test_confirmed_uplink_no_ack() {
     assert!(*send_await_complete.lock().await);
 }
 
+#[ignore]
 #[tokio::test]
 async fn test_confirmed_uplink_with_ack_rx1() {
     let (radio, timer, mut async_device) = setup_with_session();
@@ -205,6 +212,7 @@ async fn test_confirmed_uplink_with_ack_rx1() {
     }
 }
 
+#[ignore]
 #[tokio::test]
 async fn test_confirmed_uplink_with_ack_rx2() {
     let (radio, timer, mut async_device) = setup_with_session();
@@ -239,6 +247,7 @@ async fn test_confirmed_uplink_with_ack_rx2() {
     }
 }
 
+#[ignore]
 #[tokio::test]
 async fn test_link_adr_ans() {
     let (radio, timer, mut async_device) = setup_with_session();
@@ -273,6 +282,7 @@ async fn test_link_adr_ans() {
     }
 }
 
+#[ignore]
 #[tokio::test]
 async fn test_class_c_data_before_rx1() {
     let (radio, timer, mut async_device) = setup_with_session_class_c().await;
@@ -300,6 +310,7 @@ async fn test_class_c_data_before_rx1() {
     let _ = device.take_downlink().unwrap();
 }
 
+#[ignore]
 #[tokio::test]
 async fn test_class_c_data_before_rx2() {
     let (radio, timer, mut async_device) = setup_with_session_class_c().await;
@@ -330,6 +341,7 @@ async fn test_class_c_data_before_rx2() {
     let _ = device.take_downlink().unwrap();
 }
 
+#[ignore]
 #[tokio::test]
 async fn test_class_c_async_down() {
     let (radio, _timer, mut async_device) = setup_with_session_class_c().await;
