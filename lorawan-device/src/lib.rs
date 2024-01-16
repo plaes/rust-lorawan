@@ -58,17 +58,20 @@ impl defmt::Format for Downlink {
     }
 }
 
-/// Allows to fine-tune the beginning and end of the receive windows for a specific board.
+/// Allows to fine-tune the beginning and end of the receive windows for a specific board and runtime.
 pub trait Timings {
-    /// The offset in milliseconds from the beginning of the receive windows. For example, settings this to 100
-    /// tell the LoRaWAN stack to begin configuring the receive window 100 ms before the window needs to start.
-    fn get_rx_window_offset_ms(&self) -> i32;
+    /// How many milliseconds before the RX window should the SPI transaction start?
+    /// This value needs to account for the time it takes to wake up the radio and start the SPI transaction, as
+    /// well as any non-deterministic delays in the system.
+    fn get_rx_window_lead_time_ms(&self) -> u32;
 
-    /// How long to leave the receive window open in milliseconds. For example, if offset was set to 100 and duration
-    /// was set to 200, the window would be open 100 ms before and close 100 ms after the target time.
-    fn get_rx_window_duration_ms(&self) -> u32;
+    /// Explicitly set the amount of milliseconds to listen before the window starts. By default, the pessimistic assumption
+    /// of `Self::get_rx_window_lead_time_ms` will be used. If you override, be sure that: `Self::get_rx_window_buffer
+    /// < Self::get_rx_window_lead_time_ms`.
+    fn get_rx_window_buffer(&self) -> u32 {
+        self.get_rx_window_lead_time_ms()
+    }
 }
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 /// Join the network using either OTAA or ABP.

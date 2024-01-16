@@ -132,6 +132,8 @@ pub enum Response {
     ReadyToSend,
     SessionExpired,
     RxComplete,
+    Rx1Begin,
+    Rx2Begin,
 }
 
 #[derive(Debug)]

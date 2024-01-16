@@ -351,15 +351,14 @@ where
         window_delay: u32,
     ) -> Result<mac::Response, Error<R::PhyError>> {
         // The initial window configuration uses window 1 adjusted by window_delay and radio offset
-        let rx1_start_delay = (self.mac.get_rx_delay(frame, &Window::_1) as i32
-            + window_delay as i32
-            + self.radio.get_rx_window_offset_ms()) as u32;
+        let rx1_start_delay = self.mac.get_rx_delay(frame, &Window::_1) + window_delay
+            - self.radio.get_rx_window_lead_time_ms();
 
-        let rx1_end_delay = rx1_start_delay + self.radio.get_rx_window_duration_ms();
+        // XXX
+        let rx1_end_delay = rx1_start_delay + 1000;
 
-        let rx2_start_delay = (self.mac.get_rx_delay(frame, &Window::_2) as i32
-            + window_delay as i32
-            + self.radio.get_rx_window_offset_ms()) as u32;
+        let rx2_start_delay = self.mac.get_rx_delay(frame, &Window::_2) + window_delay
+            - self.radio.get_rx_window_lead_time_ms();
         self.radio_buffer.clear();
         let _ = self.between_windows(rx1_start_delay).await?;
 
@@ -370,7 +369,7 @@ where
 
         let window = {
             // Prepare for RX using correct configuration
-            let rx_config = self.mac.get_rx_config(frame, &Window::_1);
+            let rx_config = self.mac.get_rx_config(self.radio.get_rx_window_buffer(), frame, &Window::_1);
             // Cap window duration so RX2 can start on time
             let mut window_duration = min(rx1_end_delay, rx2_start_delay);
 
@@ -433,8 +432,9 @@ where
         let response = {
             // RX2
             // Prepare for RX using correct configuration
-            let rx_config = self.mac.get_rx_config(frame, &Window::_2);
-            let window_duration = self.radio.get_rx_window_duration_ms();
+            let rx_config = self.mac.get_rx_config(self.radio.get_rx_window_buffer(), frame, &Window::_2);
+            // XXX
+            let window_duration = 2000;
 
             // Pass the full radio buffer slice to RX
             self.radio.setup_rx(rx_config).await.map_err(Error::Radio)?;

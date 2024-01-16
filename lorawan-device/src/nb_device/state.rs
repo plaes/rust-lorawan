@@ -43,6 +43,7 @@ use super::{
     mac::{Frame, Mac, Window},
     radio, Event, RadioBuffer, Response, Timings,
 };
+use crate::nb_device::Response::{Rx1Begin, Rx2Begin};
 
 #[derive(Copy, Clone)]
 pub enum State {
@@ -254,28 +255,22 @@ impl WaitingForRxWindow {
         match event {
             // we are waiting for a Timeout
             Event::TimeoutFired => {
-                let (rx_config, window_start) =
-                    mac.get_rx_parameters(&self.frame, &self.window.into());
+                let (rx_config, _window_start) = mac.get_rx_parameters(
+                    radio.get_rx_window_lead_time_ms(),
+                    &self.frame,
+                    &self.window.into(),
+                );
+                // TODO: need to handle the timeout from radio instead of from client
                 // configure the radio for the RX
                 match radio.handle_event(radio::Event::RxRequest(rx_config)) {
                     Ok(_) => {
-                        let window_close: u32 = match self.window {
-                            // RxWindow1 one must timeout before RxWindow2
-                            Rx::_1(time) => {
-                                let time_between_windows =
-                                    mac.get_rx_delay(&self.frame, &Window::_2) - window_start;
-                                if time_between_windows > radio.get_rx_window_duration_ms() {
-                                    time + radio.get_rx_window_duration_ms()
-                                } else {
-                                    time + time_between_windows
-                                }
-                            }
-                            // RxWindow2 can last however long
-                            Rx::_2(time) => time + radio.get_rx_window_duration_ms(),
-                        };
                         (
                             State::WaitingForRx(self.into()),
-                            Ok(Response::TimeoutRequest(window_close)),
+                            Ok(match self.window {
+                                // RxWindow1 one must timeout before RxWindow2
+                                Rx::_1(_) => Rx1Begin,
+                                Rx::_2(_) => Rx2Begin,
+                            }),
                         )
                     }
                     Err(e) => (State::WaitingForRxWindow(self), Err(super::Error::Radio(e))),
@@ -403,7 +398,7 @@ fn data_rxwindow1_timeout<R: radio::PhyRxTx + Timings, const N: usize>(
     timestamp_ms: u32,
 ) -> (State, Result<Response, super::Error<R>>) {
     let delay = mac.get_rx_delay(&frame, &Window::_1);
-    let t1 = (delay as i32 + timestamp_ms as i32 + radio.get_rx_window_offset_ms()) as u32;
+    let t1 = delay + timestamp_ms - radio.get_rx_window_lead_time_ms();
     (
         State::WaitingForRxWindow(WaitingForRxWindow { frame, window: Rx::_1(t1) }),
         Ok(Response::TimeoutRequest(t1)),
