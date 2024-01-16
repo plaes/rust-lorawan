@@ -1,5 +1,5 @@
 use super::*;
-use crate::radio::{RfConfig, RxQuality};
+use crate::radio::{RxConfig, RxQuality};
 
 use crate::nb_device::{
     radio::{Event, PhyRxTx, Response},
@@ -15,7 +15,7 @@ pub fn test_device() -> Device<TestRadio, default_crypto::DefaultFactory, rand_c
 
 #[derive(Debug)]
 pub struct TestRadio {
-    current_config: Option<RfConfig>,
+    current_config: Option<RxConfig>,
     last_uplink: Option<Uplink>,
     rxtx_handler: Option<RxTxHandler>,
     buffer: [u8; 256],
@@ -75,11 +75,11 @@ impl PhyRxTx for TestRadio {
             }
             Event::CancelRx => (),
             Event::Phy(()) => {
-                if let (Some(rf_config), Some(rxtx_handler)) =
+                if let (Some(rx_config), Some(rxtx_handler)) =
                     (self.current_config, self.rxtx_handler)
                 {
                     self.buffer_index =
-                        rxtx_handler(self.last_uplink.take(), rf_config, &mut self.buffer);
+                        rxtx_handler(self.last_uplink.take(), rx_config.rf, &mut self.buffer);
                     return Ok(Response::RxDone(RxQuality::new(0, 0)));
                 }
             }
@@ -89,10 +89,7 @@ impl PhyRxTx for TestRadio {
 }
 
 impl Timings for TestRadio {
-    fn get_rx_window_offset_ms(&self) -> i32 {
-        0
-    }
-    fn get_rx_window_duration_ms(&self) -> u32 {
-        100
+    fn get_rx_window_lead_time_ms(&self) -> u32 {
+        10
     }
 }

@@ -293,7 +293,7 @@ where
     async fn window_complete(&mut self) -> Result<(), Error<R::PhyError>> {
         if self.class_c {
             let rf_config = self.mac.get_rxc_config();
-            self.radio.setup_rx(rf_config, true).await.map_err(Error::Radio)
+            self.radio.setup_rx(rf_config).await.map_err(Error::Radio)
         } else {
             self.radio.low_power().await.map_err(Error::Radio)
         }
@@ -310,7 +310,7 @@ where
         }
         // Class C listen while waiting for the window
         let rf_config = self.mac.get_rxc_config();
-        self.radio.setup_rx(rf_config, true).await.map_err(Error::Radio)?;
+        self.radio.setup_rx(rf_config).await.map_err(Error::Radio)?;
         let mut response = None;
         let timeout_fut = self.timer.at(duration.into());
         pin_mut!(timeout_fut);
@@ -349,21 +349,20 @@ where
         window_delay: u32,
     ) -> Result<mac::Response, Error<R::PhyError>> {
         // The initial window configuration uses window 1 adjusted by window_delay and radio offset
-        let rx1_start_delay = (self.mac.get_rx_delay(frame, &Window::_1) as i32
-            + window_delay as i32
-            + self.radio.get_rx_window_offset_ms()) as u32;
+        let rx1_start_delay = self.mac.get_rx_delay(frame, &Window::_1) + window_delay
+            - self.radio.get_rx_window_lead_time_ms();
 
-        let rx2_start_delay = (self.mac.get_rx_delay(frame, &Window::_2) as i32
-            + window_delay as i32
-            + self.radio.get_rx_window_offset_ms()) as u32;
+        let rx2_start_delay = self.mac.get_rx_delay(frame, &Window::_2) + window_delay
+            - self.radio.get_rx_window_lead_time_ms();
         self.radio_buffer.clear();
 
         // RXC
         let _ = self.between_windows(rx1_start_delay).await?;
 
         // RX1
-        let rx_config = self.mac.get_rx_config(frame, &Window::_1);
-        self.radio.setup_rx(rx_config, false).await.map_err(Error::Radio)?;
+        let rx_config =
+            self.mac.get_rx_config(self.radio.get_rx_window_buffer(), frame, &Window::_1);
+        self.radio.setup_rx(rx_config).await.map_err(Error::Radio)?;
 
         if let Some(response) = self.rx_listen().await? {
             return Ok(response);
@@ -373,8 +372,9 @@ where
         let _ = self.between_windows(rx2_start_delay).await?;
 
         // RX2
-        let rx_config = self.mac.get_rx_config(frame, &Window::_2);
-        self.radio.setup_rx(rx_config, false).await.map_err(Error::Radio)?;
+        let rx_config =
+            self.mac.get_rx_config(self.radio.get_rx_window_buffer(), frame, &Window::_2);
+        self.radio.setup_rx(rx_config).await.map_err(Error::Radio)?;
 
         if let Some(response) = self.rx_listen().await? {
             return Ok(response);
