@@ -65,8 +65,8 @@ pub trait Timings {
     /// well as any non-deterministic delays in the system.
     fn get_rx_window_lead_time_ms(&self) -> u32;
 
-    /// Explicitly set the amount of milliseconds to listen before the window starts. By default, the pessimistic assumption
-    /// of `Self::get_rx_window_lead_time_ms` will be used. If you override, be sure that: `Self::get_rx_window_buffer
+    /// Explicitly set the amount of milliseconds to have the radio "hang around" before we calculate the window to start.
+    /// By default, we will use `Self::get_rx_window_lead_time_ms`. If you set this value, be that: `Self::get_rx_window_buffer
     /// < Self::get_rx_window_lead_time_ms`.
     fn get_rx_window_buffer(&self) -> u32 {
         self.get_rx_window_lead_time_ms()

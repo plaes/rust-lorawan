@@ -122,13 +122,8 @@ where
         let rx_pkt_params = self
             .lora
             .create_rx_packet_params(8, false, 255, true, true, &mdltn_params)?;
-        // TODO: Allow DutyCycle as well?
-        let listen_mode = match config.mode {
-            LorawanRxMode::Continuous => RxMode::Continuous,
-            LorawanRxMode::Single(symbols) => RxMode::Single(symbols),
-        };
         self.lora
-            .prepare_for_rx(listen_mode, &mdltn_params, &rx_pkt_params, false)
+            .prepare_for_rx(config.mode.into(), &mdltn_params, &rx_pkt_params, false)
             .await?;
         self.rx_pkt_params = Some(rx_pkt_params);
         Ok(())
@@ -158,6 +153,15 @@ where
             }
         } else {
             Err(Error::NoRxParams)
+        }
+    }
+}
+
+impl From<LorawanRxMode> for RxMode {
+    fn from(mode: LorawanRxMode) -> Self {
+        match mode {
+            LorawanRxMode::Continuous => RxMode::Continuous,
+            LorawanRxMode::Single(symbols) => RxMode::Single(symbols),
         }
     }
 }
