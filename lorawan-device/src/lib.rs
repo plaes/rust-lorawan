@@ -58,16 +58,16 @@ impl defmt::Format for Downlink {
     }
 }
 
-/// Allows to fine-tune the beginning and end of the receive windows for a specific board.
+/// Allows to fine-tune the beginning and end of the receive windows for a specific board and runtime.
 pub trait Timings {
     /// How many milliseconds before the RX window should the SPI transaction start?
     /// This value needs to account for the time it takes to wake up the radio and start the SPI transaction, as
     /// well as any non-deterministic delays in the system.
     fn get_rx_window_lead_time_ms(&self) -> u32;
 
-    /// Optionally indicate how many milliseconds will be added to the window timeout. By default, we add the entire
-    /// setup lead time, but if you know exactly how long the deterministic length is, you can specify a smaller number
-    /// here.
+    /// Explicitly set the amount of milliseconds to listen before the window starts. By default, the pessimistic assumption
+    /// of `Self::get_rx_window_lead_time_ms` will be used. If you override, be sure that: `Self::get_rx_window_buffer
+    /// < Self::get_rx_window_lead_time_ms`.
     fn get_rx_window_buffer(&self) -> u32 {
         self.get_rx_window_lead_time_ms()
     }

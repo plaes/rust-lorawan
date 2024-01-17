@@ -260,6 +260,7 @@ impl WaitingForRxWindow {
                     &self.frame,
                     &self.window.into(),
                 );
+                // TODO: need to handle the timeout from radio instead of from client
                 // configure the radio for the RX
                 match radio.handle_event(radio::Event::RxRequest(rx_config)) {
                     Ok(_) => {
