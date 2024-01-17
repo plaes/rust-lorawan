@@ -3,7 +3,7 @@
 //! decrypting from send and receive buffers.
 
 use crate::{
-    radio::{self, RadioBuffer, RxConfig, RxMode},
+    radio::{self, RadioBuffer, RxConfig, RxMode, RfConfig},
     region, AppSKey, Downlink, NewSKey,
 };
 use heapless::Vec;
@@ -200,6 +200,14 @@ impl Mac {
         window: &Window,
     ) -> (RxConfig, u32) {
         (self.get_rx_config(buffer_ms, frame, window), self.get_rx_delay(frame, window))
+    }
+
+    /// Gets the radio configuration and timing for a given frame type and window.
+    pub(crate) fn get_rx_parameters_legacy(&mut self, frame: &Frame, window: &Window) -> (RfConfig, u32) {
+        (
+            self.region.get_rx_config(self.configuration.data_rate, frame, window),
+            self.get_rx_delay(frame, window),
+        )
     }
 
     /// Handles a received RF frame. Returns None is unparseable, fails decryption, or fails MIC

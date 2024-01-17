@@ -1,7 +1,9 @@
 #![allow(missing_docs)]
 
-use lorawan_device::async_device::radio::{PhyRxTx, RxConfig, RxMode as LorawanRxMode, RxQuality, RxStatus, TxConfig};
-use lorawan_device::Timings;
+use lorawan_device::async_device::{
+    Timings,
+    radio::{PhyRxTx, RxConfig, RxMode as LorawanRxMode, RxQuality, RxStatus, TxConfig}
+};
 
 use super::mod_params::{PacketParams, RadioError};
 use super::mod_traits::RadioKind;

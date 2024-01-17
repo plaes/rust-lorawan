@@ -8,7 +8,7 @@ where
     R: PhyRxTx,
 {
     TxRequest(TxConfig, &'a [u8]),
-    RxRequest(RxConfig),
+    RxRequest(RfConfig),
     CancelRx,
     Phy(R::PhyEvent),
 }

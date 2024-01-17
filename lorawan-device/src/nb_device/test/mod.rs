@@ -4,7 +4,6 @@ use crate::test_util::*;
 use util::*;
 
 use crate::nb_device::Event;
-#[ignore]
 #[test]
 fn test_join_rx1() {
     let mut device = test_device();
@@ -20,7 +19,6 @@ fn test_join_rx1() {
     assert!(device.get_session_keys().is_some());
 }
 
-#[ignore]
 #[test]
 fn test_join_rx2() {
     let mut device = test_device();
@@ -41,7 +39,6 @@ fn test_join_rx2() {
     assert!(device.get_session_keys().is_some());
 }
 
-#[ignore]
 #[test]
 fn test_unconfirmed_uplink_no_downlink() {
     let mut device = test_device();
@@ -57,7 +54,6 @@ fn test_unconfirmed_uplink_no_downlink() {
     let response = device.handle_event(Event::TimeoutFired).unwrap(); // end Rx2
     assert!(matches!(response, Response::RxComplete));
 }
-#[ignore]
 #[test]
 fn test_confirmed_uplink_no_ack() {
     let mut device = test_device();
@@ -75,7 +71,6 @@ fn test_confirmed_uplink_no_ack() {
     assert!(matches!(response, Response::NoAck));
 }
 
-#[ignore]
 #[test]
 fn test_confirmed_uplink_with_ack_rx1() {
     let mut device = test_device();
@@ -91,7 +86,6 @@ fn test_confirmed_uplink_with_ack_rx1() {
     assert!(matches!(response, Response::DownlinkReceived(0)));
 }
 
-#[ignore]
 #[test]
 fn test_confirmed_uplink_with_ack_rx2() {
     let mut device = test_device();
@@ -111,7 +105,6 @@ fn test_confirmed_uplink_with_ack_rx2() {
     assert!(matches!(response, Response::DownlinkReceived(0)));
 }
 
-#[ignore]
 #[test]
 fn test_link_adr_ans() {
     let mut device = test_device();

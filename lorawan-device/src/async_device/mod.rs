@@ -6,7 +6,7 @@ use super::mac::{self, Frame, Window};
 pub use super::{
     mac::{NetworkCredentials, SendData, Session},
     region::{self, Region},
-    Downlink, JoinMode, Timings,
+    Downlink, JoinMode,
 };
 use core::marker::PhantomData;
 use futures::{future::select, future::Either, pin_mut};
@@ -446,5 +446,20 @@ where
                 }
             }
         }
+    }
+}
+
+/// Allows to fine-tune the beginning and end of the receive windows for a specific board and runtime.
+pub trait Timings {
+    /// How many milliseconds before the RX window should the SPI transaction start?
+    /// This value needs to account for the time it takes to wake up the radio and start the SPI transaction, as
+    /// well as any non-deterministic delays in the system.
+    fn get_rx_window_lead_time_ms(&self) -> u32;
+
+    /// Explicitly set the amount of milliseconds to listen before the window starts. By default, the pessimistic assumption
+    /// of `Self::get_rx_window_lead_time_ms` will be used. If you override, be sure that: `Self::get_rx_window_buffer
+    /// < Self::get_rx_window_lead_time_ms`.
+    fn get_rx_window_buffer(&self) -> u32 {
+        self.get_rx_window_lead_time_ms()
     }
 }
