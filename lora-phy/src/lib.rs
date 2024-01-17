@@ -224,7 +224,7 @@ where
         }
     }
 
-    /// Prepare the SX126x a receive radio frame (single mode, continuous, or duty cycled).
+    /// Prepare the SX12xx to receive radio frames (single mode, continuous, or duty cycled).
     /// Notes:
     /// * sx126x SetRx(0 < timeout < MAX) will listen util LoRa packet header is detected,
     /// therefore we only use 0 (Single Mode) and MAX (continuous) values.
