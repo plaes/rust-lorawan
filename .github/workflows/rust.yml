@@ -82,3 +82,13 @@ jobs:
 
       - name: Clippy
         run: cargo clippy --tests --all-features -- -Dclippy::all
+  docsrs:
+    name: Documentation build (emulate docs.rs)
+    runs-on: ubuntu-latest
+    env:
+      RUSTDOCFLAGS: -Dwarnings
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: dtolnay/install@cargo-docs-rs
+      - run: cargo docs-rs
