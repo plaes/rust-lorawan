@@ -30,10 +30,10 @@ impl Otaa {
 
     /// Prepare a join request to be sent. This populates the radio buffer with the request to be
     /// sent, and returns the radio config to use for transmitting.
-    pub(crate) fn prepare_buffer<C: CryptoFactory + Default, G: RngCore, const N: usize>(
+    pub(crate) fn prepare_buffer<C: CryptoFactory + Default, G: RngCore>(
         &mut self,
         rng: &mut G,
-        buf: &mut RadioBuffer<N>,
+        buf: &mut RadioBuffer,
     ) -> u16 {
         self.dev_nonce = DevNonce::from(rng.next_u32() as u16);
         buf.clear();
@@ -46,11 +46,11 @@ impl Otaa {
         u16::from(self.dev_nonce)
     }
 
-    pub(crate) fn handle_rx<C: CryptoFactory + Default, const N: usize>(
+    pub(crate) fn handle_rx<C: CryptoFactory + Default>(
         &mut self,
         region: &mut Configuration,
         configuration: &mut super::Configuration,
-        rx: &mut RadioBuffer<N>,
+        rx: &mut RadioBuffer,
     ) -> Option<Session> {
         if let Ok(PhyPayload::JoinAccept(JoinAcceptPayload::Encrypted(encrypted))) =
             lorawan_parse(rx.as_mut_for_read(), C::default())

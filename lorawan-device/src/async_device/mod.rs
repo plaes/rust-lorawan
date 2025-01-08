@@ -43,7 +43,7 @@ use self::radio::RxStatus;
 /// that may be buffered. The defaults are 256 and 1 respectively which should be fine for Class A devices. **For Class
 /// C operation**, it is recommended to increase D to at least 2, if not 3. This is because during the RX1/RX2 windows
 /// after a Class A transmit, it is possible to receive Class C downlinks (in additional to any RX1/RX2 responses!).
-pub struct Device<R, C, T, G, const N: usize = 256, const D: usize = 1>
+pub struct Device<R, C, T, G, const D: usize = 1>
 where
     R: radio::PhyRxTx + Timings,
     T: radio::Timer,
@@ -56,7 +56,7 @@ where
     pub rng: G,
     timer: T,
     mac: Mac,
-    radio_buffer: RadioBuffer<N>,
+    radio_buffer: RadioBuffer,
     downlink: Vec<Downlink, D>,
     #[cfg(feature = "class-c")]
     class_c: bool,
@@ -91,7 +91,7 @@ impl<R> From<mac::Error> for Error<R> {
     }
 }
 
-impl<R, C, T, const N: usize> Device<R, C, T, rng::Prng, N>
+impl<R, C, T> Device<R, C, T, rng::Prng>
 where
     R: radio::PhyRxTx + Timings,
     C: CryptoFactory + Default,
@@ -131,7 +131,7 @@ where
     }
 }
 
-impl<R, C, T, G, const N: usize, const D: usize> Device<R, C, T, G, N, D>
+impl<R, C, T, G, const D: usize> Device<R, C, T, G, D>
 where
     R: radio::PhyRxTx + Timings,
     C: CryptoFactory + Default,
@@ -222,7 +222,7 @@ where
     pub async fn join(&mut self, join_mode: &JoinMode) -> Result<JoinResponse, Error<R::PhyError>> {
         match join_mode {
             JoinMode::OTAA { deveui, appeui, appkey } => {
-                let (tx_config, _) = self.mac.join_otaa::<C, G, N>(
+                let (tx_config, _) = self.mac.join_otaa::<C, G>(
                     &mut self.rng,
                     NetworkCredentials::new(*appeui, *deveui, *appkey),
                     &mut self.radio_buffer,
@@ -263,7 +263,7 @@ where
         confirmed: bool,
     ) -> Result<SendResponse, Error<R::PhyError>> {
         // Prepare transmission buffer
-        let (tx_config, _fcnt_up) = self.mac.send::<C, G, N>(
+        let (tx_config, _fcnt_up) = self.mac.send::<C, G>(
             &mut self.rng,
             &mut self.radio_buffer,
             &SendData { data, fport, confirmed },
@@ -328,9 +328,9 @@ where
         }
 
         /// RXC window listen until timeout
-        async fn rxc_listen_until_timeout<F, R, const N: usize>(
+        async fn rxc_listen_until_timeout<F, R>(
             radio: &mut R,
-            rx_buf: &mut RadioBuffer<N>,
+            rx_buf: &mut RadioBuffer,
             window_duration: u32,
             timeout_fut: F,
         ) -> RxcWindowResponse<F>
@@ -380,7 +380,7 @@ where
                     self.radio_buffer.set_pos(sz);
                     match self
                         .mac
-                        .handle_rxc::<C, N, D>(&mut self.radio_buffer, &mut self.downlink)?
+                        .handle_rxc::<C, D>(&mut self.radio_buffer, &mut self.downlink)?
                     {
                         mac::Response::NoUpdate => {
                             debug!("RXC frame was invalid.");
@@ -455,7 +455,7 @@ where
             match self.radio.rx_single(self.radio_buffer.as_mut()).await.map_err(Error::Radio)? {
                 RxStatus::Rx(s, _q) => {
                     self.radio_buffer.set_pos(s);
-                    match self.mac.handle_rx::<C, N, D>(&mut self.radio_buffer, &mut self.downlink)
+                    match self.mac.handle_rx::<C, D>(&mut self.radio_buffer, &mut self.downlink)
                     {
                         mac::Response::NoUpdate => None,
                         r => Some(r),
@@ -475,7 +475,7 @@ where
             let (sz, _rx_quality) =
                 self.radio.rx_continuous(self.radio_buffer.as_mut()).await.map_err(Error::Radio)?;
             self.radio_buffer.set_pos(sz);
-            match self.mac.handle_rxc::<C, N, D>(&mut self.radio_buffer, &mut self.downlink)? {
+            match self.mac.handle_rxc::<C, D>(&mut self.radio_buffer, &mut self.downlink)? {
                 mac::Response::NoUpdate => {
                     self.radio_buffer.clear();
                 }

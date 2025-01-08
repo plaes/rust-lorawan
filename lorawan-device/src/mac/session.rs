@@ -95,11 +95,11 @@ impl Session {
 }
 
 impl Session {
-    pub(crate) fn handle_rx<C: CryptoFactory + Default, const N: usize, const D: usize>(
+    pub(crate) fn handle_rx<C: CryptoFactory + Default, const D: usize>(
         &mut self,
         region: &mut region::Configuration,
         configuration: &mut super::Configuration,
-        rx: &mut RadioBuffer<N>,
+        rx: &mut RadioBuffer,
         dl: &mut Vec<Downlink, D>,
         ignore_mac: bool,
     ) -> Response {
@@ -182,10 +182,10 @@ impl Session {
         }
     }
 
-    pub(crate) fn prepare_buffer<C: CryptoFactory + Default, const N: usize>(
+    pub(crate) fn prepare_buffer<C: CryptoFactory + Default>(
         &mut self,
         data: &SendData<'_>,
-        tx_buffer: &mut RadioBuffer<N>,
+        tx_buffer: &mut RadioBuffer,
     ) -> FcntUp {
         tx_buffer.clear();
         let fcnt = self.fcnt_up;

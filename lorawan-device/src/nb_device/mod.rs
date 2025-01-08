@@ -14,24 +14,24 @@ mod test;
 
 type TimestampMs = u32;
 
-pub struct Device<R, C, RNG, const N: usize, const D: usize = 1>
+pub struct Device<R, C, RNG, const D: usize = 1>
 where
     R: PhyRxTx + Timings,
     C: CryptoFactory + Default,
     RNG: RngCore,
 {
     state: State,
-    shared: Shared<R, RNG, N, D>,
+    shared: Shared<R, RNG, D>,
     crypto: PhantomData<C>,
 }
 
-impl<R, C, RNG, const N: usize, const D: usize> Device<R, C, RNG, N, D>
+impl<R, C, RNG, const D: usize> Device<R, C, RNG, D>
 where
     R: PhyRxTx + Timings,
     C: CryptoFactory + Default,
     RNG: RngCore,
 {
-    pub fn new(region: region::Configuration, radio: R, rng: RNG) -> Device<R, C, RNG, N, D> {
+    pub fn new(region: region::Configuration, radio: R, rng: RNG) -> Device<R, C, RNG, D> {
         Device {
             crypto: PhantomData,
             state: State::default(),
@@ -98,7 +98,7 @@ where
     }
 
     pub fn handle_event(&mut self, event: Event<'_, R>) -> Result<Response, Error<R>> {
-        let (new_state, result) = self.state.handle_event::<R, C, RNG, N, D>(
+        let (new_state, result) = self.state.handle_event::<R, C, RNG, D>(
             &mut self.shared.mac,
             &mut self.shared.radio,
             &mut self.shared.rng,
@@ -111,10 +111,10 @@ where
     }
 }
 
-pub(crate) struct Shared<R: PhyRxTx + Timings, RNG: RngCore, const N: usize, const D: usize> {
+pub(crate) struct Shared<R: PhyRxTx + Timings, RNG: RngCore, const D: usize> {
     pub(crate) radio: R,
     pub(crate) rng: RNG,
-    pub(crate) tx_buffer: RadioBuffer<N>,
+    pub(crate) tx_buffer: RadioBuffer,
     pub(crate) mac: Mac,
     pub(crate) downlink: Vec<Downlink, D>,
 }

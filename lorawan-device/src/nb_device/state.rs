@@ -105,22 +105,21 @@ impl State {
         R: radio::PhyRxTx + Timings,
         C: CryptoFactory + Default,
         RNG: RngCore,
-        const N: usize,
         const D: usize,
     >(
         self,
         mac: &mut Mac,
         radio: &mut R,
         rng: &mut RNG,
-        buf: &mut RadioBuffer<N>,
+        buf: &mut RadioBuffer,
         dl: &mut Vec<Downlink, D>,
         event: Event<'_, R>,
     ) -> (Self, Result<Response, super::Error<R>>) {
         match self {
-            State::Idle(s) => s.handle_event::<R, C, RNG, N>(mac, radio, rng, buf, event),
-            State::SendingData(s) => s.handle_event::<R, N>(mac, radio, event),
-            State::WaitingForRxWindow(s) => s.handle_event::<R, N>(mac, radio, event),
-            State::WaitingForRx(s) => s.handle_event::<R, C, N, D>(mac, radio, buf, event, dl),
+            State::Idle(s) => s.handle_event::<R, C, RNG>(mac, radio, rng, buf, event),
+            State::SendingData(s) => s.handle_event::<R>(mac, radio, event),
+            State::WaitingForRxWindow(s) => s.handle_event::<R>(mac, radio, event),
+            State::WaitingForRx(s) => s.handle_event::<R, C, D>(mac, radio, buf, event, dl),
         }
     }
 }
@@ -133,13 +132,12 @@ impl Idle {
         R: radio::PhyRxTx + Timings,
         C: CryptoFactory + Default,
         RNG: RngCore,
-        const N: usize,
     >(
         self,
         mac: &mut Mac,
         radio: &mut R,
         rng: &mut RNG,
-        buf: &mut RadioBuffer<N>,
+        buf: &mut RadioBuffer,
         event: Event<'_, R>,
     ) -> (State, Result<Response, super::Error<R>>) {
         enum IntermediateResponse<R: radio::PhyRxTx> {
@@ -150,7 +148,7 @@ impl Idle {
         let response = match event {
             // tolerate unexpected timeout
             Event::Join(creds) => {
-                let (tx_config, dev_nonce) = mac.join_otaa::<C, RNG, N>(rng, creds, buf);
+                let (tx_config, dev_nonce) = mac.join_otaa::<C, RNG>(rng, creds, buf);
                 IntermediateResponse::RadioTx((Frame::Join, tx_config, dev_nonce as u32))
             }
             Event::TimeoutFired => IntermediateResponse::EarlyReturn(Ok(Response::NoUpdate)),
@@ -158,7 +156,7 @@ impl Idle {
                 IntermediateResponse::EarlyReturn(Err(Error::RadioEventWhileIdle.into()))
             }
             Event::SendDataRequest(send_data) => {
-                let tx_config = mac.send::<C, RNG, N>(rng, buf, &send_data);
+                let tx_config = mac.send::<C, RNG>(rng, buf, &send_data);
                 match tx_config {
                     Err(e) => IntermediateResponse::EarlyReturn(Err(e.into())),
                     Ok((tx_config, fcnt_up)) => {
@@ -184,7 +182,7 @@ impl Idle {
                             // directly jump to waiting for RxWindow
                             // allows for synchronous sending
                             radio::Response::TxDone(ms) => {
-                                data_rxwindow1_timeout::<R, N>(frame, mac, radio, ms)
+                                data_rxwindow1_timeout::<R>(frame, mac, radio, ms)
                             }
                             _ => (State::Idle(self), Err(Error::UnexpectedRadioResponse.into())),
                         }
@@ -202,7 +200,7 @@ pub struct SendingData {
 }
 
 impl SendingData {
-    pub(crate) fn handle_event<R: radio::PhyRxTx + Timings, const N: usize>(
+    pub(crate) fn handle_event<R: radio::PhyRxTx + Timings>(
         self,
         mac: &mut Mac,
         radio: &mut R,
@@ -217,7 +215,7 @@ impl SendingData {
                         match response {
                             // expect a complete transmit
                             radio::Response::TxDone(ms) => {
-                                data_rxwindow1_timeout::<R, N>(self.frame, mac, radio, ms)
+                                data_rxwindow1_timeout::<R>(self.frame, mac, radio, ms)
                             }
                             // anything other than TxComplete is unexpected
                             _ => {
@@ -245,7 +243,7 @@ pub struct WaitingForRxWindow {
 }
 
 impl WaitingForRxWindow {
-    pub(crate) fn handle_event<R: radio::PhyRxTx + Timings, const N: usize>(
+    pub(crate) fn handle_event<R: radio::PhyRxTx + Timings>(
         self,
         mac: &mut Mac,
         radio: &mut R,
@@ -313,13 +311,12 @@ impl WaitingForRx {
     pub(crate) fn handle_event<
         R: radio::PhyRxTx + Timings,
         C: CryptoFactory + Default,
-        const N: usize,
         const D: usize,
     >(
         self,
         mac: &mut Mac,
         radio: &mut R,
-        buf: &mut RadioBuffer<N>,
+        buf: &mut RadioBuffer,
         event: Event<'_, R>,
         dl: &mut Vec<Downlink, D>,
     ) -> (State, Result<Response, super::Error<R>>) {
@@ -340,7 +337,7 @@ impl WaitingForRx {
                                     Err(Error::BufferTooSmall.into()),
                                 );
                             }
-                            match mac.handle_rx::<C, N, D>(buf, dl) {
+                            match mac.handle_rx::<C, D>(buf, dl) {
                                 // NoUpdate can occur when a stray radio packet is received. Maintain state
                                 mac::Response::NoUpdate => {
                                     (State::WaitingForRx(self), Ok(Response::NoUpdate))
@@ -396,7 +393,7 @@ enum Rx {
     _2(u32),
 }
 
-fn data_rxwindow1_timeout<R: radio::PhyRxTx + Timings, const N: usize>(
+fn data_rxwindow1_timeout<R: radio::PhyRxTx + Timings>(
     frame: Frame,
     mac: &mut Mac,
     radio: &mut R,

@@ -12,6 +12,7 @@ pub(crate) mod fmt;
 use core::default::Default;
 use heapless::Vec;
 
+mod config;
 mod radio;
 
 pub mod mac;
