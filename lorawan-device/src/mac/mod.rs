@@ -25,6 +25,7 @@ use crate::nb_device;
 
 pub(crate) mod uplink;
 
+pub(crate) mod certification;
 #[cfg(feature = "multicast")]
 pub(crate) mod multicast;
 
@@ -57,6 +58,7 @@ pub(crate) struct Mac {
     state: State,
     #[cfg(feature = "multicast")]
     pub multicast: multicast::Multicast,
+    certification: certification::Certification,
 }
 
 struct BoardEirp {
@@ -102,6 +104,7 @@ impl Mac {
             },
             #[cfg(feature = "multicast")]
             multicast: multicast::Multicast::new(),
+            certification: certification::Certification {},
         }
     }
 
@@ -212,6 +215,7 @@ impl Mac {
                 &mut self.configuration,
                 #[cfg(feature = "multicast")]
                 &mut self.multicast,
+                &mut self.certification,
                 buf,
                 dl,
                 false,
@@ -244,6 +248,7 @@ impl Mac {
                 &mut self.configuration,
                 #[cfg(feature = "multicast")]
                 &mut self.multicast,
+                &mut self.certification,
                 buf,
                 dl,
                 true,
@@ -317,6 +322,7 @@ pub(crate) enum Response {
     RxComplete,
     #[cfg(feature = "multicast")]
     Multicast(multicast::Response),
+    Certification(certification::Response),
 }
 
 impl From<Response> for nb_device::Response {
@@ -329,6 +335,7 @@ impl From<Response> for nb_device::Response {
             Response::JoinSuccess => nb_device::Response::JoinSuccess,
             Response::NoUpdate => nb_device::Response::NoUpdate,
             Response::RxComplete => nb_device::Response::RxComplete,
+            Response::Certification(_) => unimplemented!(),
             #[cfg(feature = "multicast")]
             Response::Multicast(_) => unimplemented!(),
         }
