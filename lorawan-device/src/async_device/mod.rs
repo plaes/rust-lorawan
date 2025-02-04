@@ -29,6 +29,10 @@ pub use lorawan::{
     parser::McAddr,
 };
 
+pub trait DeviceHandler {
+    fn reset_device(&mut self) -> () {}
+}
+
 #[cfg(feature = "multicast")]
 #[derive(Debug, Clone, Copy)]
 /// Multicast Groups range from 0 to 3.
@@ -59,13 +63,15 @@ use self::radio::RxStatus;
 /// that may be buffered. The defaults are 256 and 1 respectively which should be fine for Class A devices. **For Class
 /// C operation**, it is recommended to increase D to at least 2, if not 3. This is because during the RX1/RX2 windows
 /// after a Class A transmit, it is possible to receive Class C downlinks (in additional to any RX1/RX2 responses!).
-pub struct Device<R, C, T, G, const N: usize = 256, const D: usize = 1>
+pub struct Device<I, R, C, T, G, const N: usize = 256, const D: usize = 1>
 where
+    I: DeviceHandler,
     R: radio::PhyRxTx + Timings,
     T: radio::Timer,
     C: CryptoFactory + Default,
     G: RngCore,
 {
+    pub device: I,
     crypto: PhantomData<C>,
     radio: R,
     /// Access to provided (pseudo)-random number generator.
@@ -127,8 +133,9 @@ impl<R> From<mac::Error> for Error<R> {
     }
 }
 
-impl<R, C, T, const N: usize> Device<R, C, T, rng::Prng, N>
+impl<I, R, C, T, const N: usize> Device<I, R, C, T, rng::Prng, N>
 where
+    I: DeviceHandler,
     R: radio::PhyRxTx + Timings,
     C: CryptoFactory + Default,
     T: radio::Timer,
@@ -142,8 +149,14 @@ where
     /// This function must **always** be called with a new randomly generated seed! **Never** call this function more
     /// than once using the same seed. Generate the seed using a true random number generator. Using the same seed will
     /// leave you vulnerable to replay attacks.
-    pub fn new_with_seed(region: region::Configuration, radio: R, timer: T, seed: u64) -> Self {
-        Device::new_with_seed_and_session(region, radio, timer, seed, None)
+    pub fn new_with_seed(
+        device: I,
+        region: region::Configuration,
+        radio: R,
+        timer: T,
+        seed: u64,
+    ) -> Self {
+        Device::new_with_seed_and_session(device, region, radio, timer, seed, None)
     }
 
     /// Create a new [`Device`] by providing your own random seed. Also optionally provide your own [`Session`].
@@ -156,6 +169,7 @@ where
     /// than once using the same seed. Generate the seed using a true random number generator. Using the same seed will
     /// leave you vulnerable to replay attacks.
     pub fn new_with_seed_and_session(
+        device: I,
         region: region::Configuration,
         radio: R,
         timer: T,
@@ -163,12 +177,13 @@ where
         session: Option<Session>,
     ) -> Self {
         let rng = rng::Prng::new(seed);
-        Device::new_with_session(region, radio, timer, rng, session)
+        Device::new_with_session(device, region, radio, timer, rng, session)
     }
 }
 
-impl<R, C, T, G, const N: usize, const D: usize> Device<R, C, T, G, N, D>
+impl<I, R, C, T, G, const N: usize, const D: usize> Device<I, R, C, T, G, N, D>
 where
+    I: DeviceHandler,
     R: radio::PhyRxTx + Timings,
     C: CryptoFactory + Default,
     T: radio::Timer,
@@ -179,12 +194,13 @@ where
     ///
     /// See also [`new_with_seed`](Device::new_with_seed) to let [`Device`] use a builtin PRNG by providing a random
     /// seed.
-    pub fn new(region: region::Configuration, radio: R, timer: T, rng: G) -> Self {
-        Device::new_with_session(region, radio, timer, rng, None)
+    pub fn new(device: I, region: region::Configuration, radio: R, timer: T, rng: G) -> Self {
+        Device::new_with_session(device, region, radio, timer, rng, None)
     }
 
     /// Create a new [`Device`] and provide an optional [`Session`].
     pub fn new_with_session(
+        device: I,
         region: region::Configuration,
         radio: R,
         timer: T,
@@ -196,6 +212,7 @@ where
             mac.set_session(session);
         }
         Self {
+            device,
             crypto: PhantomData,
             radio,
             rng,
@@ -473,6 +490,7 @@ where
                         .mac
                         .handle_rxc::<C, N, D>(&mut self.radio_buffer, &mut self.downlink)?;
                     match Self::handle_mac_response(
+                        &mut self.device,
                         &mut self.radio_buffer,
                         &mut self.mac,
                         &mut self.radio,
@@ -554,6 +572,7 @@ where
 
     /// Helper function to handle MAC responses and perform common actions
     async fn handle_mac_response(
+        device: &mut impl DeviceHandler,
         radio_buffer: &mut RadioBuffer<N>,
         mac: &mut Mac,
         radio: &mut R,
@@ -564,6 +583,20 @@ where
             mac::Response::NoUpdate => {
                 radio_buffer.clear();
                 Ok(None)
+            }
+            mac::Response::Certification(response) => {
+                radio_buffer.clear();
+                match response {
+                    mac::certification::Response::DutReset => {
+                        device.reset_device();
+                        //Ok(Some(mac::Response::NoUpdate))
+                        Ok(None)
+                    }
+                    _ => {
+                        info!("Received: {:?}", response);
+                        Ok(None)
+                    }
+                }
             }
             #[cfg(feature = "multicast")]
             mac::Response::Multicast(response) => {
@@ -596,6 +629,7 @@ where
                     let mac_response =
                         self.mac.handle_rx::<C, N, D>(&mut self.radio_buffer, &mut self.downlink);
                     Self::handle_mac_response(
+                        &mut self.device,
                         &mut self.radio_buffer,
                         &mut self.mac,
                         &mut self.radio,
@@ -620,6 +654,7 @@ where
             let mac_response =
                 self.mac.handle_rxc::<C, N, D>(&mut self.radio_buffer, &mut self.downlink)?;
             if let Some(response) = Self::handle_mac_response(
+                &mut self.device,
                 &mut self.radio_buffer,
                 &mut self.mac,
                 &mut self.radio,
