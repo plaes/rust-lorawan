@@ -5,6 +5,7 @@ use lorawan::certification::{parse_downlink_certification_messages, DownlinkDUTC
 #[cfg_attr(feature = "defmt-03", derive(defmt::Format))]
 pub enum Response {
     NoUpdate,
+    DutJoin,
     DutReset,
     DutVersions,
     AdrBitChange(bool),
@@ -25,6 +26,7 @@ impl Certification {
                         return Response::AdrBitChange(adr);
                     }
                 }
+                DutJoinReq(..) => return Response::DutJoin,
                 DutResetReq(..) => return Response::DutReset,
                 DutVersionsReq(..) => return Response::DutVersions,
                 TxPeriodicityChangeReq(payload) => {
