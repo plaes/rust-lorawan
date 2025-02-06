@@ -31,6 +31,7 @@ pub use lorawan::{
 
 pub trait DeviceHandler {
     fn reset_device(&mut self) -> () {}
+    fn override_periodicity(&mut self, _seconds: Option<u16>) -> ();
 }
 
 #[cfg(feature = "multicast")]
@@ -585,17 +586,24 @@ where
                 Ok(None)
             }
             mac::Response::Certification(response) => {
+                use mac::certification::Response as Req;
                 radio_buffer.clear();
                 match response {
-                    mac::certification::Response::DutReset => {
+                    Req::DutReset => {
                         device.reset_device();
-                        //Ok(Some(mac::Response::NoUpdate))
                         Ok(None)
                     }
+                    Req::TxPeriodicityChange(seconds) => {
+                        device.override_periodicity(seconds);
+                        Ok(None)
+                    }
+                    Req::NoUpdate => Ok(None),
+                    /*
                     _ => {
                         info!("Received: {:?}", response);
                         Ok(None)
                     }
+                    */
                 }
             }
             #[cfg(feature = "multicast")]
