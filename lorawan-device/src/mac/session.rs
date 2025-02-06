@@ -24,6 +24,9 @@ pub struct Session {
     pub devaddr: DevAddr<[u8; 4]>,
     pub fcnt_up: u32,
     pub fcnt_down: u32,
+
+    // certification
+    pub override_confirmed: Option<bool>,
 }
 
 #[derive(Clone, Debug)]
@@ -68,6 +71,8 @@ impl Session {
             fcnt_down: 0,
             fcnt_up: 0,
             uplink: uplink::Uplink::default(),
+            //
+            override_confirmed: None,
         }
     }
 
@@ -156,7 +161,15 @@ impl Session {
                         (decrypted.f_port(), decrypted.frm_payload())
                     {
                         if fport == 224 {
-                            return certification.handle_message(data).into();
+                            use crate::mac::certification::Response as CR;
+                            match certification.handle_message(data) {
+                                // Handle MAC layer commands here...
+                                CR::TxFramesCtrlReq(ftype) => {
+                                    self.override_confirmed = ftype.into();
+                                }
+                                // ..and push everything else down to device
+                                n => return n.into(),
+                            }
                         }
                         #[cfg(feature = "multicast")]
                         if multicast.is_remote_setup_port(fport) {
@@ -207,9 +220,13 @@ impl Session {
             self.uplink.clear_downlink_confirmation();
         }
 
-        self.confirmed = data.confirmed;
+        self.confirmed = if let Some(v) = self.override_confirmed {
+            v
+        } else {
+            data.confirmed
+        };
 
-        phy.set_confirmed(data.confirmed)
+        phy.set_confirmed(self.confirmed)
             .set_fctrl(&fctrl)
             .set_f_port(data.fport)
             .set_dev_addr(self.devaddr)

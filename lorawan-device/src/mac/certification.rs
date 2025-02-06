@@ -7,6 +7,7 @@ pub enum Response {
     NoUpdate,
     DutReset,
     TxPeriodicityChange(Option<u16>),
+    TxFramesCtrlReq(Option<bool>),
 }
 
 pub struct Certification {}
@@ -21,6 +22,11 @@ impl Certification {
                 TxPeriodicityChangeReq(payload) => {
                     if let Ok(periodicity) = payload.periodicity() {
                         return Response::TxPeriodicityChange(periodicity);
+                    }
+                }
+                TxFramesCtrlReq(payload) => {
+                    if let Ok(frametype) = payload.frame_type() {
+                        return Response::TxFramesCtrlReq(frametype);
                     }
                 }
             }

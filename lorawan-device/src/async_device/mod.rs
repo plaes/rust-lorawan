@@ -597,13 +597,10 @@ where
                         device.override_periodicity(seconds);
                         Ok(None)
                     }
+                    // Handled at session level
+                    Req::TxFramesCtrlReq(_) => unreachable!(),
+                    // Fallback
                     Req::NoUpdate => Ok(None),
-                    /*
-                    _ => {
-                        info!("Received: {:?}", response);
-                        Ok(None)
-                    }
-                    */
                 }
             }
             #[cfg(feature = "multicast")]
