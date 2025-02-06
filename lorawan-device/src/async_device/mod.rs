@@ -598,7 +598,9 @@ where
                         Ok(None)
                     }
                     // Handled at session level
+                    Req::AdrBitChange(_) |
                     Req::TxFramesCtrlReq(_) => unreachable!(),
+
                     // Fallback
                     Req::NoUpdate => Ok(None),
                 }

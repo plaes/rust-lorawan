@@ -6,6 +6,7 @@ use lorawan::certification::{parse_downlink_certification_messages, DownlinkDUTC
 pub enum Response {
     NoUpdate,
     DutReset,
+    AdrBitChange(bool),
     TxPeriodicityChange(Option<u16>),
     TxFramesCtrlReq(Option<bool>),
 }
@@ -18,6 +19,11 @@ impl Certification {
         let messages = parse_downlink_certification_messages(data);
         for message in messages {
             match message {
+                AdrBitChangeReq(payload) => {
+                    if let Ok(adr) = payload.adr_enable() {
+                        return Response::AdrBitChange(adr);
+                    }
+                }
                 DutResetReq(..) => return Response::DutReset,
                 TxPeriodicityChangeReq(payload) => {
                     if let Ok(periodicity) = payload.periodicity() {

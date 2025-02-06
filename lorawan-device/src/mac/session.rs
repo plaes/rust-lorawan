@@ -24,8 +24,10 @@ pub struct Session {
     pub devaddr: DevAddr<[u8; 4]>,
     pub fcnt_up: u32,
     pub fcnt_down: u32,
+    // TODO: ADR handling
 
     // certification
+    pub override_adr: bool,
     pub override_confirmed: Option<bool>,
 }
 
@@ -71,7 +73,9 @@ impl Session {
             fcnt_down: 0,
             fcnt_up: 0,
             uplink: uplink::Uplink::default(),
-            //
+
+            // certification
+            override_adr: false,
             override_confirmed: None,
         }
     }
@@ -164,6 +168,9 @@ impl Session {
                             use crate::mac::certification::Response as CR;
                             match certification.handle_message(data) {
                                 // Handle MAC layer commands here...
+                                CR::AdrBitChange(adr) => {
+                                    self.override_adr = adr;
+                                }
                                 CR::TxFramesCtrlReq(ftype) => {
                                     self.override_confirmed = ftype.into();
                                 }
@@ -225,6 +232,10 @@ impl Session {
         } else {
             data.confirmed
         };
+
+        if self.override_adr {
+            fctrl.set_adr()
+        }
 
         phy.set_confirmed(self.confirmed)
             .set_fctrl(&fctrl)
