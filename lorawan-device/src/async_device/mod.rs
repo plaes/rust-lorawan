@@ -30,7 +30,8 @@ pub use lorawan::{
 };
 
 pub trait DeviceHandler {
-    fn reset_device(&mut self) -> () {}
+    fn reset_device(&mut self) -> ();
+    fn reset_session(&mut self) -> ();
     fn override_periodicity(&mut self, _seconds: Option<u16>) -> ();
 }
 
@@ -589,6 +590,10 @@ where
                 use mac::certification::Response as Req;
                 radio_buffer.clear();
                 match response {
+                    Req::DutJoin => {
+                        device.reset_session();
+                        Ok(None)
+                    }
                     Req::DutReset => {
                         device.reset_device();
                         Ok(None)
