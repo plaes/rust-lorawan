@@ -609,7 +609,7 @@ where
                             .tx(tx_config, radio_buffer.as_ref_for_read())
                             .await
                             .map_err(Error::Radio)?;
-                        Ok(None)
+                        Ok(Some(mac.rx2_complete()))
                     }
                     Req::TxPeriodicityChange(seconds) => {
                         device.override_periodicity(seconds);
