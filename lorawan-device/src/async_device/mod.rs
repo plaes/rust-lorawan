@@ -593,13 +593,30 @@ where
                         device.reset_device();
                         Ok(None)
                     }
+                    Req::DutVersions => {
+                        let mut cmd = lorawan::certification::DutVersionsAnsCreator::new();
+                        cmd.set_versions_raw([
+                            0, 0, 0, 1, // Firmware version (TODO?)
+                            1, 0, 4, 0, // Lorawan version (1.0.4 \o/)
+                            2, 1, 0, 4, // region version, RP002-1.0.4 == 2.1.0.4 (TODO?)
+                        ]);
+                        let (tx_config, _fcnt_up) = mac.send::<C, G, N>(
+                            rng,
+                            radio_buffer,
+                            &SendData { data: cmd.build(), fport: 224, confirmed: false },
+                        )?;
+                        radio
+                            .tx(tx_config, radio_buffer.as_ref_for_read())
+                            .await
+                            .map_err(Error::Radio)?;
+                        Ok(None)
+                    }
                     Req::TxPeriodicityChange(seconds) => {
                         device.override_periodicity(seconds);
                         Ok(None)
                     }
                     // Handled at session level
-                    Req::AdrBitChange(_) |
-                    Req::TxFramesCtrlReq(_) => unreachable!(),
+                    Req::AdrBitChange(_) | Req::TxFramesCtrlReq(_) => unreachable!(),
 
                     // Fallback
                     Req::NoUpdate => Ok(None),
