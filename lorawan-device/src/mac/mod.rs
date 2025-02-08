@@ -104,7 +104,7 @@ impl Mac {
             },
             #[cfg(feature = "multicast")]
             multicast: multicast::Multicast::new(),
-            certification: certification::Certification {},
+            certification: certification::Certification::new(),
         }
     }
 
@@ -166,6 +166,23 @@ impl Mac {
         buf: &mut RadioBuffer<N>,
     ) -> Result<(radio::TxConfig, FcntUp)> {
         self.multicast.setup_send::<C, N>(&mut self.state, buf).map(|fcnt_up| {
+            let mut tx_config =
+                self.region.create_tx_config(rng, self.configuration.data_rate, &Frame::Data);
+            tx_config.adjust_power(self.board_eirp.max_power, self.board_eirp.antenna_gain);
+            (tx_config, fcnt_up)
+        })
+    }
+
+    pub(crate) fn certification_setup_send<
+        C: CryptoFactory + Default,
+        RNG: RngCore,
+        const N: usize,
+    >(
+        &mut self,
+        rng: &mut RNG,
+        buf: &mut RadioBuffer<N>,
+    ) -> Result<(radio::TxConfig, FcntUp)> {
+        self.certification.setup_send::<C, N>(&mut self.state, buf).map(|fcnt_up| {
             let mut tx_config =
                 self.region.create_tx_config(rng, self.configuration.data_rate, &Frame::Data);
             tx_config.adjust_power(self.board_eirp.max_power, self.board_eirp.antenna_gain);

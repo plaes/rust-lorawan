@@ -588,17 +588,18 @@ where
             }
             mac::Response::Certification(response) => {
                 use mac::certification::Response as Req;
-                radio_buffer.clear();
+                let success = Some(mac::Response::RxComplete);
                 match response {
                     Req::DutJoin => {
                         device.reset_session();
-                        Ok(None)
+                        Ok(success)
                     }
                     Req::DutReset => {
                         device.reset_device();
-                        Ok(None)
+                        Ok(success)
                     }
                     Req::DutVersions => {
+                        radio_buffer.clear();
                         let mut cmd = lorawan::certification::DutVersionsAnsCreator::new();
                         cmd.set_versions_raw([
                             0, 0, 0, 1, // Firmware version (TODO?)
@@ -618,13 +619,26 @@ where
                     }
                     Req::TxPeriodicityChange(seconds) => {
                         device.override_periodicity(seconds);
-                        Ok(None)
+                        radio_buffer.clear();
+                        Ok(success)
+                    }
+                    Req::UplinkReady => {
+                        radio_buffer.clear();
+                        let (tx_config, _fcnt_up) =
+                            mac.certification_setup_send::<C, G, N>(rng, radio_buffer)?;
+                        radio
+                            .tx(tx_config, radio_buffer.as_ref_for_read())
+                            .await
+                            .map_err(Error::Radio)?;
+                        Ok(Some(mac.rx2_complete()))
                     }
                     // Handled at session level
                     Req::AdrBitChange(_) | Req::TxFramesCtrlReq(_) => unreachable!(),
-
                     // Fallback
-                    Req::NoUpdate => Ok(None),
+                    Req::NoUpdate => {
+                        radio_buffer.clear();
+                        Ok(success)
+                    }
                 }
             }
             #[cfg(feature = "multicast")]
