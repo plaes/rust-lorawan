@@ -35,7 +35,7 @@ impl Certification {
                     }
                 }
                 TxFramesCtrlReq(payload) => {
-                    if let Ok(frametype) = payload.frame_type() {
+                    if let Ok(frametype) = payload.frame_type_override() {
                         return Response::TxFramesCtrlReq(frametype);
                     }
                 }
