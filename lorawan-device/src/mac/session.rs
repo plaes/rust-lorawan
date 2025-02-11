@@ -142,6 +142,8 @@ impl Session {
                     )
                     .unwrap();
 
+                println!("XXX: {:x?}", decrypted);
+
                 if !ignore_mac {
                     // MAC commands may be in the FHDR or the FRMPayload
                     self.handle_downlink_macs(
@@ -302,7 +304,9 @@ impl Session {
                     configuration.rx1_delay = super::del_to_delay_ms(payload.delay());
                     self.uplink.add_mac_command(RXTimingSetupAnsCreator::new());
                 }
-                _ => (),
+                c => {
+                    println!("Unhandled mac command: {:?}", c);
+                }
             }
         }
     }
