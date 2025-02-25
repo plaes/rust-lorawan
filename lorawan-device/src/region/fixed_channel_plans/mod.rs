@@ -39,14 +39,14 @@ impl From<Subband> for usize {
 
 #[derive(Default, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub(crate) struct FixedChannelPlan<const NUM_DR: usize, F: FixedChannelRegion<NUM_DR>> {
+pub(crate) struct FixedChannelPlan<F: FixedChannelRegion> {
     last_tx_channel: u8,
     channel_mask: ChannelMask<9>,
     _fixed_channel_region: PhantomData<F>,
     join_channels: JoinChannels,
 }
 
-impl<const D: usize, F: FixedChannelRegion<D>> FixedChannelPlan<D, F> {
+impl<F: FixedChannelRegion> FixedChannelPlan<F> {
     pub fn set_125k_channels(&mut self, enabled: bool) {
         let mask = if enabled {
             0xFF
@@ -69,7 +69,7 @@ impl<const D: usize, F: FixedChannelRegion<D>> FixedChannelPlan<D, F> {
     }
 }
 
-pub(crate) trait FixedChannelRegion<const D: usize>: ChannelRegion<D> {
+pub(crate) trait FixedChannelRegion: ChannelRegion {
     fn uplink_channels() -> &'static [u32; 72];
     fn downlink_channels() -> &'static [u32; 8];
     fn get_default_rx2() -> u32;
@@ -77,7 +77,7 @@ pub(crate) trait FixedChannelRegion<const D: usize>: ChannelRegion<D> {
     fn get_dbm() -> i8;
 }
 
-impl<const D: usize, F: FixedChannelRegion<D>> RegionHandler for FixedChannelPlan<D, F> {
+impl<F: FixedChannelRegion> RegionHandler for FixedChannelPlan<F> {
     fn process_join_accept<T: AsRef<[u8]>, C>(
         &mut self,
         join_accept: &DecryptedJoinAcceptPayload<T, C>,
